@@ -1,0 +1,415 @@
+<title>Walmart Sales Trend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a fixed 1200 x 800 dashboard canvas (like a Tableau fixed-size dashboard), scaled down to fit narrower screens.
+   Rows: header + filters / five shelf-label KPIs / sales barcode + actions / four analysis panels. */
+:root {
+  /* Theme 1, "Walmart": light, Walmart blue header band, true-blue data, Spark yellow for the peak story */
+  color-scheme: light;
+  --bg: #d9e7f5;
+  --canvas: #eef5fc;
+  --panel: #ffffff;
+  --ink: #041e42;         /* Walmart navy */
+  --ink-2: #3d5476;
+  --ink-3: #6e819c;
+  --rule: #cfdcec;
+  --grid: #e4edf7;
+  --brand: #0071ce;       /* Walmart true blue */
+  --accent: #0071ce;
+  --accent-soft: #b9d6f2;
+  --tag: #ffc220;         /* Spark yellow */
+  --tag-ink: #041e42;
+  --neg: #d6332a;
+  --flag: #f47321;        /* Walmart orange */
+  --hi: #0071ce;          /* links, owner labels, focus */
+  --head-bg: #0071ce;
+  --head-ink: #ffffff;
+  --head-ink-2: #d6e8fa;
+  --head-hi: #ffc220;
+  --tip-bg: #041e42;
+  --tip-ink: #ffffff;
+  --shadow: 0 1px 0 rgba(4,30,66,.05), 0 6px 16px -10px rgba(4,30,66,.3);
+  --f-display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+/* Theme 2, "Dark": neutral charcoal, light-blue data, the same yellow for the peak */
+:root[data-skin="dark"] {
+  color-scheme: dark;
+  --bg: #08090b; --canvas: #121519; --panel: #1b1f25;
+  --ink: #f3f5f8; --ink-2: #b3bac5; --ink-3: #7c8592; --rule: #2c323b; --grid: #232830;
+  --brand: #4ea1f3; --accent: #5aa9f0; --accent-soft: #2a3f5c;
+  --tag: #ffc220; --tag-ink: #121519; --neg: #ff6b5e; --flag: #ff8a3d; --hi: #ffc220;
+  --head-bg: transparent; --head-ink: #f3f5f8; --head-ink-2: #b3bac5; --head-hi: #ffc220;
+  --tip-bg: #f3f5f8; --tip-ink: #121519;
+  --shadow: 0 1px 0 rgba(0,0,0,.4), 0 10px 22px -14px rgba(0,0,0,.85);
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 13px/1.4 var(--f-body); }
+.page { padding-inline: 16px; padding-block: 16px; }
+.stage { width: 100%; max-width: 1200px; margin: 0 auto; position: relative; overflow: hidden; }
+.canvas { width: 1200px; height: 800px; background: var(--canvas); border-top: 0; transform-origin: 0 0; padding: 16px;
+  display: grid; grid-template-rows: 52px 74px 270px minmax(0, 1fr); gap: 12px; border-radius: 6px; box-shadow: var(--shadow); }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 116%; margin: 0; letter-spacing: -0.01em; }
+.eyebrow { font: 600 9.5px/1.2 var(--f-mono); letter-spacing: .11em; text-transform: uppercase; color: var(--ink-3); }
+.under { font: 400 11px/1.3 var(--f-mono); color: var(--ink-3); }
+
+/* header */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-width: 0; background: var(--head-bg); color: var(--head-ink); margin: -16px -16px 0; padding: 12px 16px 0; height: calc(100% + 16px); border-radius: 6px 6px 0 0; }
+.top .seg, .top select { box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.top .t { display: grid; gap: 3px; min-width: 0; }
+h1 { font-size: 28px; font-weight: 850; line-height: 1; white-space: nowrap; }
+h1 .yr { color: var(--head-hi); font-weight: 600; font-size: 20px; }
+.thesis { font-size: 12.5px; color: var(--head-ink-2); white-space: nowrap; }
+.thesis mark { background: var(--tag); color: var(--tag-ink); padding: 0 .25em; border-radius: 2px; }
+.filters { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.seg { display: inline-flex; background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; padding: 2px; }
+.seg button { font: 500 11.5px var(--f-mono); color: var(--ink-2); background: none; border: 0; border-radius: 999px; padding: 5px 9px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--tag); color: var(--tag-ink); font-weight: 600; }
+select { font: 500 11.5px var(--f-mono); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 7px; padding: 5px 8px; cursor: pointer; }
+.reset { font: 500 11px var(--f-mono); background: none; border: 0; color: var(--head-hi); cursor: pointer; padding: 4px 2px; text-decoration: underline; text-underline-offset: 3px; }
+button:focus-visible, select:focus-visible, .row-hit:focus-visible { outline: 2px solid var(--hi); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* shelf-edge KPI labels */
+.labels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.label { background: var(--panel); border-radius: 3px; box-shadow: var(--shadow); padding: 9px 12px 8px; display: grid; grid-template-rows: auto 1fr auto; gap: 2px; position: relative; overflow: hidden; border-top: 4px solid var(--brand); }
+.label.peak { border-top-color: var(--tag); }
+.label .k { font: 600 9.5px/1.2 var(--f-mono); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-2); }
+.label .v { font: 800 24px/1.05 var(--f-display); font-stretch: 112%; font-variant-numeric: tabular-nums; align-self: center; }
+.label .v.neg { color: var(--neg); }
+.label .v small { font-size: .55em; color: var(--ink-3); }
+.label .sub { font: 400 10px/1.2 var(--f-mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.label .code { position: absolute; right: 10px; top: 9px; width: 30px; height: 11px; opacity: .5;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px 3px, var(--ink) 3px 5px, transparent 5px 6px, var(--ink) 6px 7px, transparent 7px 9px); }
+
+/* panels */
+.row { display: grid; gap: 12px; min-height: 0; }
+.mid { grid-template-columns: minmax(0, 1fr) 372px; }
+.bottom { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.panel { background: var(--panel); border-radius: 5px; box-shadow: var(--shadow); padding: 11px 14px 10px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 6px; min-width: 0; min-height: 0; }
+.panel h2 { font-size: 15px; font-weight: 750; line-height: 1.15; margin-top: 2px; }
+.ph { display: flex; justify-content: space-between; align-items: end; gap: 10px; }
+.legend { display: flex; gap: 12px; font: 10px var(--f-mono); color: var(--ink-2); white-space: nowrap; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.chart { position: relative; min-height: 0; }
+.chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+svg text { font-family: var(--f-mono); fill: var(--ink-2); font-size: 10px; }
+svg .grid { stroke: var(--grid); }
+svg .axis-line { stroke: var(--rule); }
+.note { font: 10px/1.35 var(--f-mono); color: var(--ink-3); margin: 0; }
+
+/* actions panel */
+.recs { display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); min-height: 0; }
+.rec { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; align-items: center; border-top: 1px solid var(--grid); padding-block: 3px; }
+.rec .who { font: 600 9px/1.25 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--hi); }
+.rec p { margin: 0; font-size: 11.5px; line-height: 1.32; color: var(--ink-2); }
+.rec p b { color: var(--ink); font-weight: 600; }
+
+/* factor gauges */
+.gauges { display: grid; grid-template-rows: repeat(4, minmax(0, 1fr)); align-content: stretch; }
+.gauge { display: grid; gap: 4px; align-content: center; }
+.gauge .r { display: flex; justify-content: space-between; font: 11px var(--f-mono); }
+.gauge .bar { position: relative; height: 9px; background: var(--grid); border-radius: 2px; }
+.gauge .band { position: absolute; left: 35%; width: 30%; top: 0; bottom: 0; background: var(--accent-soft); opacity: .8; }
+.gauge .mid0 { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--ink-2); }
+.gauge .fill { position: absolute; top: 2px; bottom: 2px; background: var(--accent); border-radius: 1px; }
+
+.tip { position: fixed; pointer-events: none; z-index: 10; background: var(--tip-bg); color: var(--tip-ink); font: 11.5px/1.45 var(--f-mono); padding: 7px 9px; border-radius: 4px; max-width: 250px; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+.tip b { font-weight: 600; }
+.foot { max-width: 1200px; margin: 10px auto 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 20px; font: 11px var(--f-mono); color: var(--ink-3); }
+.foot a { color: var(--hi); }
+@media (prefers-reduced-motion: no-preference) { .bar-in { transition: height .3s ease, y .3s ease; } }
+</style>
+
+<div class="page">
+  <div class="stage" id="stage">
+    <div class="canvas" id="canvas">
+      <header class="top">
+        <div class="t">
+          <h1>Walmart Sales Trend <span class="yr">· 2010–2012</span></h1>
+          <span class="thesis">45 stores, flat all year until Thanksgiving and the <mark>week before Christmas</mark>.</span>
+        </div>
+        <div class="filters" role="group" aria-label="Filters">
+          <div class="seg" id="f-year" role="group" aria-label="Year">
+            <button type="button" data-v="all" aria-pressed="true">All</button>
+            <button type="button" data-v="2010" aria-pressed="false">2010</button>
+            <button type="button" data-v="2011" aria-pressed="false">2011</button>
+            <button type="button" data-v="2012" aria-pressed="false">2012</button>
+          </div>
+          <label class="sr" for="f-tier">Store size</label>
+          <select id="f-tier"><option value="all">All sizes</option><option>1 Large</option><option>2 Upper-mid</option><option>3 Lower-mid</option><option>4 Small</option></select>
+          <label class="sr" for="f-store">Store</label>
+          <select id="f-store"><option value="all">All stores</option></select>
+          <button type="button" class="reset" id="reset" hidden>Clear</button>
+          <div class="seg" id="f-skin" role="group" aria-label="Theme">
+            <button type="button" data-v="walmart" aria-pressed="true">Walmart</button>
+            <button type="button" data-v="dark" aria-pressed="false">Dark</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="labels" id="kpis" aria-label="Key figures"></section>
+
+      <div class="row mid">
+        <section class="panel" aria-labelledby="h-barcode">
+          <div class="ph">
+            <div><span class="eyebrow">The sales barcode · one bar per week</span><h2 id="h-barcode">Two spikes a year carry the calendar</h2></div>
+            <div class="legend"><span><i style="background:var(--accent)"></i>weekly sales</span><span><i style="background:var(--tag)"></i>pre-Christmas (not flagged)</span><span><i style="background:var(--flag);border-radius:50%"></i>flagged holiday</span></div>
+          </div>
+          <div class="chart" id="c-barcode"></div>
+          <p class="note" id="barcode-note"></p>
+        </section>
+        <section class="panel" aria-labelledby="h-recs">
+          <div><span class="eyebrow">Recommendations</span><h2 id="h-recs">What to do about it</h2></div>
+          <div class="recs">
+            <div class="rec"><span class="who">BI &amp; Forecast</span><p><b>Fix the holiday calendar.</b> The peak is the 2 weeks before Christmas, not the flagged week.</p></div>
+            <div class="rec"><span class="who">Store Ops</span><p><b>Staff and stock up for Thanksgiving–Dec 24.</b> Treat Super Bowl as a normal week.</p></div>
+            <div class="rec"><span class="who">Ops &amp; HR</span><p><b>Plan for January,</b> 12% below average: clearance and lighter schedules.</p></div>
+            <div class="rec"><span class="who">Regional</span><p><b>Review Store 14</b> (−$7.3M) and Store 36 (−17.5%). Learn from 38, 44, 39.</p></div>
+            <div class="rec"><span class="who">Supply Chain</span><p><b>Allocate holiday stock per store.</b> Peaks range from 1.0x to 2.05x.</p></div>
+          </div>
+          <span></span>
+        </section>
+      </div>
+
+      <div class="row bottom">
+        <section class="panel" aria-labelledby="h-lift">
+          <div><span class="eyebrow">Avg sales vs a regular week</span><h2 id="h-lift">Only two holidays matter</h2></div>
+          <div class="chart" id="c-lift"></div>
+          <p class="note">The raw holiday flag shows only +7.8% and hides this.</p>
+        </section>
+        <section class="panel" aria-labelledby="h-season">
+          <div><span class="eyebrow">Avg week by month · index</span><h2 id="h-season">December peaks, January slumps</h2></div>
+          <div class="chart" id="c-season"></div>
+          <p class="note" id="season-note"></p>
+        </section>
+        <section class="panel" aria-labelledby="h-growth">
+          <div><span class="eyebrow">2012 vs 2011 · click a store</span><h2 id="h-growth">Store momentum</h2></div>
+          <div class="chart" id="c-growth"></div>
+          <p class="note" id="growth-note"></p>
+        </section>
+        <section class="panel" aria-labelledby="h-factors">
+          <div><span class="eyebrow">Correlation with weekly sales</span><h2 id="h-factors">Weather &amp; economy barely register</h2></div>
+          <div class="gauges" id="c-factors"></div>
+          <p class="note">Shaded band = |r| under 0.3, a weak or no link.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <span>Analysis by Nishad Rashid Mahi · Walmart weekly sales dataset (Kaggle) · 6,435 store-weeks</span>
+    <a href="https://github.com/MahinRashid/Walmart-Sales-Trend" target="_blank" rel="noopener">SQL, Python &amp; Excel on GitHub</a>
+  </div>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const D = /*__DATA__*/null;
+const NS = "http://www.w3.org/2000/svg";
+const W = D.weeks.map(s => new Date(s + "T00:00:00"));
+const NW = W.length;
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const isPre = W.map(d => d.getMonth() === 11 && d.getDate() >= 18 && d.getDate() <= 24);
+const event = W.map((d, i) => D.flag[i] ? ({1:"Super Bowl",8:"Labor Day",10:"Thanksgiving",11:"Christmas (flagged)"})[d.getMonth()] : (isPre[i] ? "Pre-Christmas" : "Regular week"));
+const ALL = D.stores.map((s, i) => ({ ...s, idx: i }));
+const storeById = Object.fromEntries(ALL.map(s => [s.id, s]));
+const state = { year: "all", tier: "all", store: "all" };
+
+const $ = s => document.querySelector(s);
+const fmtM = v => "$" + (v / 1e6).toFixed(1) + "M";
+const fmtB = v => "$" + (v / 1e9).toFixed(2) + "B";
+const pct = v => (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1) + "%";
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function el(tag, attrs = {}, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function txt(parent, x, y, s, attrs = {}) { const t = el("text", { x, y, ...attrs }, parent); t.textContent = s; return t; }
+function svgFor(box, label) { box.innerHTML = ""; const w = box.clientWidth, h = box.clientHeight; return [el("svg", { viewBox: `0 0 ${w} ${h}`, role: "img", "aria-label": label }, box), w, h]; }
+
+// ---------- scaling the 1200x800 canvas ----------
+function fit() { const s = Math.min(1, $("#stage").clientWidth / 1200); $("#canvas").style.transform = `scale(${s})`; $("#stage").style.height = (800 * s) + "px"; }
+
+// ---------- selection ----------
+const tierStores = () => ALL.filter(s => state.tier === "all" || s.tier === state.tier);
+const selStores = () => tierStores().filter(s => state.store === "all" || s.id === +state.store);
+const inYear = i => state.year === "all" || W[i].getFullYear() === +state.year;
+function chainWeekly(stores) { const out = new Array(NW).fill(0); for (const s of stores) { const r = D.sales[s.idx]; for (let i = 0; i < NW; i++) out[i] += r[i]; } return out; }
+
+// ---------- tooltip ----------
+const tip = $("#tip");
+function showTip(e, html) { tip.innerHTML = html; tip.hidden = false; const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8); const y = e.clientY - tip.offsetHeight - 12; tip.style.left = Math.max(8, x) + "px"; tip.style.top = (y < 8 ? e.clientY + 16 : y) + "px"; }
+function hideTip() { tip.hidden = true; }
+function hover(node, html) { node.addEventListener("mousemove", e => showTip(e, html)); node.addEventListener("mouseleave", hideTip); }
+
+// ---------- KPIs ----------
+function renderKPIs(stores, weekly) {
+  const idx = [...Array(NW).keys()].filter(inYear);
+  const total = idx.reduce((a, i) => a + weekly[i], 0), avg = total / idx.length;
+  const ytd = y => { let t = 0; for (let i = 0; i < NW; i++) if (W[i].getFullYear() === y && W[i].getMonth() <= 9) t += weekly[i]; return t; };
+  const yoy = ytd(2012) / ytd(2011) - 1;
+  const reg = idx.filter(i => event[i] === "Regular week"), regAvg = reg.reduce((a, i) => a + weekly[i], 0) / reg.length;
+  const pre = idx.filter(i => isPre[i]);
+  const preLift = pre.length ? pre.reduce((a, i) => a + weekly[i], 0) / pre.length / regAvg - 1 : null;
+  const dec = stores.filter(s => s.growth < 0).length;
+  const yrLabel = { all: "Feb 2010 – Oct 2012", 2010: "Feb–Dec 2010", 2011: "Jan–Dec 2011", 2012: "Jan–Oct 2012" }[state.year];
+  const cards = [
+    { k: "Total sales", v: total >= 1e9 ? fmtB(total) : fmtM(total), sub: `${stores.length} store${stores.length > 1 ? "s" : ""} · ${yrLabel}` },
+    { k: "Avg week", v: fmtM(avg), sub: `across ${idx.length} weeks` },
+    { k: "Growth 2012", v: pct(yoy), neg: yoy < 0, sub: "Jan–Oct 2012 vs Jan–Oct 2011" },
+    { k: "Pre-Xmas lift", v: preLift == null ? "n/a" : pct(preLift), peak: true, sub: preLift == null ? "2012 data ends in October" : "vs regular week · not flagged" },
+    { k: "Declining stores", v: `${dec}<small> / ${stores.length}</small>`, neg: dec > 0 && stores.length === 1, sub: dec ? "below their Jan–Oct 2011 sales" : "every selected store grew" },
+  ];
+  $("#kpis").innerHTML = cards.map(c => `<div class="label${c.peak ? " peak" : ""}"><span class="code" aria-hidden="true"></span><span class="k">${c.k}</span><span class="v${c.neg ? " neg" : ""}">${c.v}</span><span class="sub">${c.sub}</span></div>`).join("");
+}
+
+// ---------- barcode ----------
+function niceTicks(max, n) { const raw = max / n, p = Math.pow(10, Math.floor(Math.log10(raw))), s = [1, 2, 2.5, 5, 10].map(k => k * p).find(k => k >= raw); const out = []; for (let v = 0; v <= max; v += s) out.push(v); return out; }
+function fmtTick(v) { return v === 0 ? "$0" : v >= 1e6 ? "$" + (+(v / 1e6).toFixed(1)) + "M" : "$" + (v / 1e3).toFixed(0) + "K"; }
+function renderBarcode(weekly) {
+  const [svg, w, h] = svgFor($("#c-barcode"), "Weekly sales, one bar per week");
+  const m = { l: 44, r: 52, t: 14, b: 30 }, iw = w - m.l - m.r, ih = h - m.t - m.b;
+  const max = Math.max(...weekly) * 1.1, y = v => m.t + ih - (v / max) * ih;
+  const step = iw / NW, bw = Math.max(1, step - 1.3);
+  for (const t of niceTicks(max, 4)) { el("line", { x1: m.l, x2: w - m.r, y1: y(t), y2: y(t), class: "grid" }, svg); txt(svg, m.l - 7, y(t) + 3.5, fmtTick(t), { "text-anchor": "end" }); }
+  const avg = weekly.reduce((a, b) => a + b, 0) / NW;
+  const accent = css("--accent"), tag = css("--tag"), flag = css("--flag"), panel = css("--panel"), ink = css("--ink");
+  weekly.forEach((v, i) => {
+    const x = m.l + i * step;
+    el("rect", { x, y: y(v), width: bw, height: Math.max(0, m.t + ih - y(v)), fill: isPre[i] ? tag : accent, opacity: inYear(i) ? (isPre[i] ? 1 : .88) : .16, class: "bar-in" }, svg);
+    if (D.flag[i]) el("circle", { cx: x + bw / 2, cy: m.t + ih + 7, r: 3, fill: flag, stroke: panel, "stroke-width": 1 }, svg);
+    hover(el("rect", { x: x - .3, y: m.t, width: step + .6, height: ih + 12, fill: "transparent" }, svg),
+      `<b>Week ending ${D.weeks[i]}</b><br>${fmtM(v)} · ${pct(v / avg - 1)} vs avg week<br>${event[i] === "Pre-Christmas" ? "Pre-Christmas, not flagged as holiday" : event[i]}`);
+    if (isPre[i]) txt(svg, x + bw + 4, y(v) + 9, fmtM(v), { fill: ink, "font-weight": 600 });
+  });
+  el("line", { x1: m.l, x2: w - m.r, y1: y(avg), y2: y(avg), stroke: css("--ink-2"), "stroke-dasharray": "3 3" }, svg);
+  txt(svg, w - m.r + 6, y(avg) + 3.5, "avg " + (avg / 1e6 >= 1 ? (avg / 1e6).toFixed(1) + "M" : (avg / 1e3).toFixed(0) + "K"));
+  [2010, 2011, 2012].forEach(yr => { const i = W.findIndex(d => d.getFullYear() === yr), x = m.l + i * step - .6; el("line", { x1: x, x2: x, y1: m.t + ih + 12, y2: h - 2, class: "axis-line" }, svg); txt(svg, x + 4, h - 4, yr, { "font-weight": 600 }); });
+  const pk = weekly.indexOf(Math.max(...weekly));
+  $("#barcode-note").textContent = `Biggest week: ${D.weeks[pk]} at ${fmtM(weekly[pk])} (${pct(weekly[pk] / avg - 1)} vs avg week). ${state.year !== "all" ? "Weeks outside " + state.year + " are faded." : "Hover a bar for the week's detail."}`;
+}
+
+// ---------- holiday lift ----------
+function renderLift(weekly) {
+  const [svg, w, h] = svgFor($("#c-lift"), "Sales lift by holiday");
+  const idx = [...Array(NW).keys()].filter(inYear);
+  const avgOf = a => a.reduce((s, i) => s + weekly[i], 0) / a.length;
+  const reg = avgOf(idx.filter(i => event[i] === "Regular week"));
+  const evs = [["Pre-Christmas", "Pre-Xmas*"], ["Thanksgiving", "Thanksgiving"], ["Super Bowl", "Super Bowl"], ["Labor Day", "Labor Day"], ["Christmas (flagged)", "Xmas (flag)"]];
+  const m = { l: 82, r: 8, t: 4, b: 18 }, iw = w - m.l - m.r, rh = (h - m.t - m.b) / evs.length;
+  const lo = -0.15, hi = 0.95, x = v => m.l + (v - lo) / (hi - lo) * iw;
+  [0, 0.4, 0.8].forEach(t => { el("line", { x1: x(t), x2: x(t), y1: m.t, y2: h - m.b, class: "grid" }, svg); txt(svg, x(t), h - 4, (t * 100) + "%", { "text-anchor": "middle" }); });
+  el("line", { x1: x(0), x2: x(0), y1: m.t, y2: h - m.b, stroke: css("--ink-2") }, svg);
+  evs.forEach(([e, short], k) => {
+    const cy = m.t + k * rh + rh / 2, ii = idx.filter(i => event[i] === e);
+    txt(svg, m.l - 8, cy + 3.5, short, { "text-anchor": "end", fill: css("--ink") });
+    if (!ii.length) { txt(svg, x(0) + 6, cy + 3.5, "none in " + state.year); return; }
+    const a = avgOf(ii), lift = a / reg - 1, x0 = x(Math.min(0, lift)), x1 = x(Math.max(0, lift));
+    el("rect", { x: x0, y: cy - Math.min(10, rh * .32), width: Math.max(1.5, x1 - x0), height: Math.min(20, rh * .64), rx: 2, fill: lift < 0 ? css("--neg") : e === "Pre-Christmas" ? css("--tag") : css("--accent") }, svg);
+    txt(svg, (lift < 0 ? x(0) : x1) + 5, cy + 3.5, pct(lift), { fill: css("--ink"), "font-weight": 600 });
+    hover(el("rect", { x: 0, y: cy - rh / 2, width: w, height: rh, fill: "transparent" }, svg), `<b>${e === "Pre-Christmas" ? "Pre-Christmas week (not flagged)" : e}</b><br>${ii.length} week${ii.length > 1 ? "s" : ""} · avg ${fmtM(a)}<br>regular week avg ${fmtM(reg)}`);
+  });
+}
+
+// ---------- seasonality ----------
+function renderSeason(weekly) {
+  const [svg, w, h] = svgFor($("#c-season"), "Average weekly sales by month");
+  const idx = [...Array(NW).keys()].filter(inYear);
+  const overall = idx.reduce((a, i) => a + weekly[i], 0) / idx.length;
+  const months = MON.map((n, mo) => { const ii = idx.filter(i => W[i].getMonth() === mo); return { n, v: ii.length ? ii.reduce((a, i) => a + weekly[i], 0) / ii.length : null }; });
+  const m = { l: 2, r: 2, t: 16, b: 16 }, iw = w - m.l - m.r, ih = h - m.t - m.b;
+  const max = Math.max(...months.map(d => d.v || 0)) * 1.06, y = v => m.t + ih - v / max * ih;
+  const step = iw / 12, bw = step * .7;
+  months.forEach((d, k) => {
+    const x = m.l + k * step + (step - bw) / 2;
+    txt(svg, x + bw / 2, h - 3, d.n[0], { "text-anchor": "middle" });
+    if (d.v == null) return;
+    const ix = Math.round(d.v / overall * 100);
+    el("rect", { x, y: y(d.v), width: bw, height: m.t + ih - y(d.v), rx: 1.5, fill: ix >= 105 ? css("--accent") : ix < 92 ? css("--neg") : css("--accent-soft"), class: "bar-in" }, svg);
+    if (ix >= 105 || ix < 92) txt(svg, x + bw / 2, y(d.v) - 4, ix, { "text-anchor": "middle", fill: css("--ink"), "font-weight": 600 });
+    hover(el("rect", { x: m.l + k * step, y: 0, width: step, height: h, fill: "transparent" }, svg), `<b>${d.n}</b><br>avg week ${fmtM(d.v)}<br>index ${ix} (avg week = 100)`);
+  });
+  el("line", { x1: m.l, x2: w - m.r, y1: y(overall), y2: y(overall), stroke: css("--ink-2"), "stroke-dasharray": "3 3" }, svg);
+  const dec = months[11].v, jan = months[0].v;
+  $("#season-note").textContent = dec && jan ? `Dashed line = avg week (100). Dec ${Math.round(dec / overall * 100)}, Jan ${Math.round(jan / overall * 100)}.` : "Dashed line = avg week (100). Pick All to see every month.";
+}
+
+// ---------- store momentum (top 5 + bottom 5) ----------
+function renderGrowth() {
+  const [svg, w, h] = svgFor($("#c-growth"), "Fastest growing and declining stores");
+  const pool = [...tierStores()].sort((a, b) => b.growth - a.growth);
+  let rows = pool.length <= 10 ? pool : [...pool.slice(0, 5), null, ...pool.slice(-5)];
+  if (state.store !== "all" && !rows.some(r => r && r.id === +state.store)) rows = [...rows, null, storeById[state.store]];
+  const m = { l: 52, r: 4, t: 2, b: 2 }, iw = w - m.l - m.r, rh = (h - m.t - m.b) / rows.length;
+  const lim = Math.max(18, ...pool.map(r => Math.abs(r.growth))) * 1.02, x = v => m.l + (v + lim) / (2 * lim) * (iw - 76);
+  el("line", { x1: x(0), x2: x(0), y1: m.t, y2: h - m.b, class: "axis-line" }, svg);
+  rows.forEach((r, k) => {
+    const cy = m.t + k * rh + rh / 2;
+    if (!r) { txt(svg, m.l - 6, cy + 3, "⋯", { "text-anchor": "end" }); return; }
+    const sel = state.store === String(r.id), dim = state.store !== "all" && !sel;
+    txt(svg, m.l - 6, cy + 3.5, "Store " + r.id, { "text-anchor": "end", fill: sel ? css("--ink") : css("--ink-2"), "font-weight": sel ? 600 : 400 });
+    const x0 = x(Math.min(0, r.growth)), x1 = x(Math.max(0, r.growth));
+    el("rect", { x: x0, y: cy - rh * .3, width: Math.max(1.5, x1 - x0), height: rh * .6, rx: 1.5, fill: r.growth < 0 ? css("--neg") : css("--accent"), opacity: dim ? .3 : 1 }, svg);
+    txt(svg, (r.growth < 0 ? x(0) : x1) + 5, cy + 3.5, pct(r.growth / 100), { fill: css("--ink"), "font-weight": 600 });
+    const hit = el("rect", { x: 0, y: cy - rh / 2, width: w, height: rh, fill: "transparent", class: "row-hit", tabindex: 0, role: "button", "aria-label": `Filter to store ${r.id}` }, svg);
+    hit.style.cursor = "pointer";
+    hover(hit, `<b>Store ${r.id}</b> · ${r.tier.slice(2)}<br>${pct(r.growth / 100)} (${r.change >= 0 ? "+" : "−"}$${Math.abs(r.change).toFixed(1)}M) Jan–Oct 2012 vs 2011<br>avg week ${fmtM(r.avg)} · Xmas peak ${r.xmas.toFixed(2)}x<br><i>Click to ${sel ? "clear" : "filter to this store"}</i>`);
+    const pick = () => setStore(sel ? "all" : String(r.id));
+    hit.addEventListener("click", pick); hit.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
+  const dec = pool.filter(s => s.growth < 0).length;
+  $("#growth-note").textContent = `Top & bottom 5 of ${pool.length}. ${pool.length - dec} grew, ${dec} declined.`;
+}
+
+// ---------- factors ----------
+function corr(xs, ys) { const n = xs.length; let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0; for (let i = 0; i < n; i++) { const a = xs[i], b = ys[i]; sx += a; sy += b; sxx += a * a; syy += b * b; sxy += a * b; } return (n * sxy - sx * sy) / Math.sqrt((n * sxx - sx * sx) * (n * syy - sy * sy)); }
+function renderFactors(stores) {
+  const f = [["temp", "Temperature"], ["fuel", "Fuel price"], ["cpi", "CPI"], ["unemp", "Unemployment"]];
+  const ys = [], xs = { temp: [], fuel: [], cpi: [], unemp: [] };
+  for (const s of stores) for (let i = 0; i < NW; i++) if (inYear(i)) { ys.push(D.sales[s.idx][i]); for (const [k] of f) xs[k].push(D[k][s.idx][i]); }
+  $("#c-factors").innerHTML = f.map(([k, name]) => {
+    const r = corr(xs[k], ys), ok = isFinite(r);
+    const left = ok ? (r < 0 ? 50 + r * 50 : 50) : 50, width = ok ? Math.abs(r) * 50 : 0;
+    return `<div class="gauge"><div class="r"><span>${name}</span><b>${ok ? "r = " + (r >= 0 ? "+" : "−") + Math.abs(r).toFixed(2) : "n/a"}</b></div>
+      <div class="bar" role="img" aria-label="${name} correlation ${ok ? r.toFixed(2) : "not available"}"><span class="band"></span><span class="fill" style="left:${left}%;width:${Math.max(width, .6)}%"></span><span class="mid0"></span></div></div>`;
+  }).join("") ;
+}
+
+// ---------- theme ----------
+let skinPicked = false;
+function viewerDark() { const t = document.documentElement.getAttribute("data-theme"); return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; }
+function setSkin(v, picked) {
+  document.documentElement.setAttribute("data-skin", v);
+  $("#f-skin").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === v));
+  if (picked) { skinPicked = true; try { localStorage.setItem("wst-skin", v); } catch (e) {} }
+  render();
+}
+
+// ---------- wiring ----------
+function render() {
+  const stores = selStores(), weekly = chainWeekly(stores);
+  renderKPIs(stores, weekly); renderBarcode(weekly); renderLift(weekly); renderSeason(weekly); renderGrowth(); renderFactors(stores);
+  $("#reset").hidden = state.year === "all" && state.tier === "all" && state.store === "all";
+  try { localStorage.setItem("wst-filters", JSON.stringify(state)); } catch (e) {}
+}
+function setStore(v) {
+  state.store = v;
+  if (v !== "all" && state.tier !== "all" && storeById[v].tier !== state.tier) { state.tier = "all"; $("#f-tier").value = "all"; }
+  $("#f-store").value = v; hideTip(); render();
+}
+function syncYear() { $("#f-year").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === state.year)); }
+[...ALL].sort((a, b) => a.id - b.id).forEach(s => { const o = document.createElement("option"); o.value = s.id; o.textContent = `Store ${s.id} · ${s.tier.slice(2)}`; $("#f-store").appendChild(o); });
+$("#f-year").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; state.year = b.dataset.v; syncYear(); render(); });
+$("#f-tier").addEventListener("change", e => { state.tier = e.target.value; if (state.store !== "all" && state.tier !== "all" && storeById[state.store].tier !== state.tier) { state.store = "all"; $("#f-store").value = "all"; } render(); });
+$("#f-store").addEventListener("change", e => setStore(e.target.value));
+$("#reset").addEventListener("click", () => { state.year = state.tier = state.store = "all"; $("#f-tier").value = "all"; $("#f-store").value = "all"; syncYear(); render(); });
+try { const s = JSON.parse(localStorage.getItem("wst-filters") || "null"); if (s && s.year) { Object.assign(state, { year: s.year, tier: s.tier, store: s.store }); $("#f-tier").value = state.tier; $("#f-store").value = state.store; syncYear(); } } catch (e) {}
+let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(fit, 60); });
+let saved = null; try { saved = localStorage.getItem("wst-skin"); } catch (e) {}
+if (saved) skinPicked = true;
+$("#f-skin").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setSkin(b.dataset.v, true); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (!skinPicked) setSkin(viewerDark() ? "dark" : "walmart"); });
+new MutationObserver(() => { if (!skinPicked) setSkin(viewerDark() ? "dark" : "walmart"); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+fit(); setSkin(saved || (viewerDark() ? "dark" : "walmart"));
+if (document.fonts) document.fonts.ready.then(render);
+</script>
