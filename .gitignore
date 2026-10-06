@@ -1,3 +1,7 @@
 sql/walmart.db
 __pycache__/
 .ipynb_checkpoints/
+tableau/_walkthrough_artifact.html
+
+# Personal build notes (kept locally, not published)
+tableau/

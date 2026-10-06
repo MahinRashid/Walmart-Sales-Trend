@@ -8,7 +8,6 @@ The biggest week of the year isn't even flagged as a holiday in the source data.
 
 📄 **[Full report](REPORT.md)** ·
 🖥️ [Interactive web dashboard](dashboard/index.html) (enable GitHub Pages to share it as a live link) ·
-🧭 [Tableau walkthrough](tableau/TABLEAU_WALKTHROUGH.md) ·
 📊 [Tableau dashboard](https://public.tableau.com/app/profile/nishad.rashid.mahi/viz/WalmartSales_17286028604180/WalmartSalesTrend) ·
 📓 [Python notebook](notebooks/walmart_sales_analysis.ipynb) ·
 🗄️ [SQL queries](sql/02_business_questions.sql) ([results](sql/query_results.md)) ·
@@ -21,6 +20,32 @@ The biggest week of the year isn't even flagged as a holiday in the source data.
 ![Dashboard, dark theme](images/dashboard_dark.png)
 
 </details>
+
+---
+
+## What I improved from version 1
+
+I first built this project as a single Tableau dashboard. Version 2 is a full rework: I went back to the data,
+found a labelling problem that changed the main conclusion, and rebuilt every part of the project around business questions.
+
+| Version 1 (first dashboard) | Version 2 (this repo) |
+|---|---|
+| ![Version 1 dashboard](Project%20finalized.png) | ![Version 2 dashboard](images/dashboard_walmart.png) |
+
+| Area | Version 1 | Version 2 |
+|---|---|---|
+| **Business framing** | No stated question; README was one sentence | Three business questions, 6 findings, 6 recommendations with owners, and a [full report](REPORT.md) |
+| **Data quality** | Raw holiday flag used as-is | Found that the flag **misses the biggest week of the year** (pre-Christmas, +70%) and marks the week *after* Christmas instead. Built a corrected `Holiday_Event` field |
+| **Dates** | Not checked | Source uses dd-mm-yyyy; parsed explicitly so days and months aren't swapped |
+| **Tools** | Tableau only | SQL (10 queries, window functions, correlation in SQL), Python notebook, formula-driven Excel, Tableau and an HTML/JS dashboard |
+| **Holiday chart** | Two coloured blocks, no values | Lift by named holiday with % labels (+70%, +43%, +5%, +1%, −7%) |
+| **Store chart** | Line chart across store numbers (implies a trend that doesn't exist) | Ranked diverging bars showing growth and decline, top & bottom 5 |
+| **CPI chart** | Line drawn across CPI values (fake trend) | Replaced with a correlation panel showing all four external factors are weak |
+| **Temperature chart** | 6,400 overlapping circles | Covered by the correlation panel; no overplotting |
+| **Trend chart** | Monthly totals that mix 4- and 5-week months; unexplained second line | Weekly "sales barcode" with flagged holidays marked and peaks labelled |
+| **Design** | Dark gradient, low contrast, no KPIs | Fixed 1200×800 layout, Walmart colour theme plus a dark theme, KPI cards, takeaway titles; yellow used only for the peak and red only for declines |
+| **Interactivity** | None | Year, store-size and store filters; click a store to filter the whole dashboard |
+| **Validation** | None | Every number cross-checked across SQL, pandas and Excel |
 
 ---
 
@@ -109,8 +134,7 @@ so an apparent "CPI effect" is really a store-mix effect.
 | Analysis | SQL | 10 business queries: CTEs, conditional aggregation, window functions (`RANK`, `NTILE`, `LAG`, running `SUM OVER` for Pareto), and Pearson correlation written in pure SQL. |
 | Deep dive & charts | Python | pandas + matplotlib notebook: trend, holiday lift, seasonality, store momentum, store-level holiday sensitivity, correlation. |
 | Manager summary | Excel | Formula-driven workbook (SUMIFS / AVERAGEIFS / RANK / SUMPRODUCT, conditional formatting, charts) that recalculates if the data changes. |
-| Dashboard | HTML/JS, Tableau | Custom interactive dashboard (filters, cross-filtering, tooltips, sortable scorecard) plus a Tableau version. |
-| Dashboard (Tableau) | Tableau | Interactive dashboard. See the [rebuild guide](tableau/dashboard_rebuild_guide.md) for the v2 design. |
+| Dashboard | Tableau, HTML/JS | Redesigned 1200×800 Tableau dashboard (LOD expressions, table calculations, filter actions) and an interactive web version with two themes. |
 
 ## Repository structure
 
@@ -128,16 +152,13 @@ so an apparent "CPI effect" is really a store-mix effect.
 │   ├── walmart_sales_analysis.ipynb    # full analysis with outputs
 │   └── build_notebook.py               # regenerates the notebook and charts
 ├── excel/Walmart_Store_Performance.xlsx
-├── REPORT.md                         # full analysis report
-├── tableau/
-│   ├── TABLEAU_WALKTHROUGH.md          # step-by-step Tableau rebuild
-│   └── dashboard_rebuild_guide.md      # design spec: layout, colours, expected values
-├── Walmart Sales.twb, *.hyper          # v1 Tableau workbook + extract
+├── REPORT.md                           # full analysis report
+├── Walmart Sales.twb, *.hyper          # version 1 Tableau workbook + extract
 ├── dashboard/
 │   ├── index.html                      # interactive web dashboard (open in a browser)
 │   └── template.html, data.json, build_dashboard.py
 ├── images/                             # charts used in this README
-└── Project finalized.png               # v1 dashboard screenshot
+└── Project finalized.png               # version 1 dashboard screenshot
 ```
 
 ## Reproduce

@@ -114,7 +114,7 @@ The cleaned file is `data/walmart_clean.csv`. The one-row-per-store summary is `
 | 2. Engineer features | Holiday events, calendar fields, size tiers, store growth, Christmas multiplier | SQL `sales` view, notebook §2 |
 | 3. Analyse | 10 SQL business queries using CTEs, window functions (`RANK`, `NTILE`, `LAG`, running `SUM OVER`) and Pearson correlation in pure SQL | `sql/02_business_questions.sql` → `sql/query_results.md` |
 | 4. Cross-check | Every number recomputed independently in pandas and in Excel formulas. All three agree. | `notebooks/`, `excel/` |
-| 5. Visualise | Six static charts for the report, an interactive 1200×800 dashboard and a Tableau version | `images/`, `dashboard/`, `tableau/` |
+| 5. Visualise | Six static charts for the report, a redesigned 1200×800 Tableau dashboard and an interactive web version | `images/`, `dashboard/` |
 
 ### Key definitions
 
@@ -297,7 +297,8 @@ and you can filter it by year, store size and store. Clicking a store in **Store
 | ![Dashboard, Walmart theme](images/dashboard_walmart.png) | ![Dashboard, dark theme](images/dashboard_dark.png) |
 
 * **Web version:** `dashboard/index.html` (open in a browser, or publish with GitHub Pages).
-* **Tableau version:** follow [the step-by-step walkthrough](tableau/TABLEAU_WALKTHROUGH.md).
+* **Tableau version:** [published on Tableau Public](https://public.tableau.com/app/profile/nishad.rashid.mahi/viz/WalmartSales_17286028604180/WalmartSalesTrend).
+* **What changed from version 1:** see the [comparison in the README](README.md#what-i-improved-from-version-1).
 
 **How the design supports the story:**
 
@@ -348,8 +349,7 @@ and you can filter it by year, store size and store. Clicking a store in **Store
 | `notebooks/walmart_sales_analysis.ipynb` | Full Python analysis with outputs |
 | `excel/Walmart_Store_Performance.xlsx` | Formula-driven manager summary |
 | `dashboard/index.html` | Interactive 1200×800 dashboard, two themes |
-| `tableau/TABLEAU_WALKTHROUGH.md` | Step-by-step Tableau rebuild |
-| `tableau/dashboard_rebuild_guide.md` | Design spec: layout, colours, expected values |
+| `Walmart Sales.twb`, `Project finalized.png` | Version 1 Tableau workbook and screenshot |
 | `images/` | Charts and dashboard screenshots |
 
 ### B. SQL query index
